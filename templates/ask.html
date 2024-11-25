@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faça uma Pergunta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background: linear-gradient(to right, #3c0d8b, #6b1f8c);
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            color: #ffffff;
+        }
+        h2 {
+            color: #000000;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .luw_icone_cabeçalho{
+    width: 6rem;
+}
+    </style>
+</head>
+<body>
+    <header>
+        <img src="static/Luw_branco_icone.png" alt="LUW" id="luw_icone" class="luw_icone_cabeçalho">
+        <h1>LUW Consultant</h1>
+    </header>
+    <div class="container">
+        <form method="POST">
+            <label for="query">Digite sua pergunta:</label>
+            <input type="text" id="query" name="query" value="{{ query }}" required>
+            <button type="submit">Pesquisar</button>
+        </form>
+
+        {% if results %}
+            <h2>Resultados:</h2>
+            <ul>
+                {% for result in results %}
+                    <li>
+                        <strong>Pergunta Relacionada:</strong> {{ result.question }}<br>
+                        <strong>Resposta:</strong> {{ result.answer }}<br>
+                        <strong>Similaridade:</strong> {{ result.score }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            {% if query %}
+                <p>Nenhum resultado encontrado.</p>
+            {% endif %}
+        {% endif %}
+
+        <a href="/">Voltar para a pesquisa</a>
+    </div>
+</body>
+</html>

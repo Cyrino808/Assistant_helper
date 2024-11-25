@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela de Perguntas e Respostas</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Perguntas e Respostas</h1>
+    <a href="/">Voltar para a pesquisa</a>
+    {% if table_data %}
+        <table border="1" cellpadding="10" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>Pergunta</th>
+                    <th>Resposta</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table_data %}
+                    <tr>
+                        <td>{{ row["Question"] }}</td>
+                        <td>{{ row["Answer"] }}</td>
+                        <td>
+                            <form method="POST" action="/delete/{{ loop.index0 }}" style="display:inline;">
+                                <button type="submit" onclick="return confirm('Tem certeza que deseja apagar esta entrada?');">
+                                    Apagar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Não há perguntas ou respostas no momento.</p>
+    {% endif %}
+</body>
+</html>

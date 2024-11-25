@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adicionar Pergunta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background: linear-gradient(to right, #3c0d8b, #6b1f8c);
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            color: #ffffff;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        textarea {
+            resize: none;
+        }
+        button {
+            background: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        a {
+            color: #007BFF;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        p {
+            color: green;
+            font-weight: bold;
+        }
+
+        .luw_icone_cabeçalho{
+    width: 6rem;
+}
+    </style>
+</head>
+<body>
+    <header>
+        <img src="static/Luw_branco_icone.png" alt="LUW" id="luw_icone" class="luw_icone_cabeçalho">
+        <h1>LUW Consultant</h1>
+    </header>
+    <div class="container">
+        <form method="POST">
+            <label for="question">Pergunta:</label>
+            <input type="text" id="question" name="question" required>
+            
+            <label for="answer">Resposta:</label>
+            <textarea id="answer" name="answer" rows="4" required></textarea>
+
+            <button type="submit">Adicionar</button>
+        </form>
+
+        {% if message %}
+            <p>{{ message }}</p>
+        {% endif %}
+
+        <a href="/">Voltar para a pesquisa</a>
+    </div>
+</body>
+</html>
