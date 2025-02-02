@@ -64,8 +64,7 @@ prompt = PromptTemplate(
 
 chain = LLMChain(llm=llm, prompt=prompt)
 
-# Carrega as variáveis de ambiente
-load_dotenv()
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 # Caminhos
 faiss_index_path = "faiss_index"
