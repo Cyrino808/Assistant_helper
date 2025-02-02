@@ -1,44 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perguntar ao ChatGPT</title>
+    <title>Chat com LUW</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
+            background-color: #f4f4f9;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
         }
         header {
             background: linear-gradient(to right, #3c0d8b, #6b1f8c);
             color: white;
-            padding: 1rem 0;
             text-align: center;
+            padding: 1rem;
         }
-        .container {
+        .chat-container {
             max-width: 800px;
             margin: 20px auto;
             padding: 20px;
             background: white;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+            overflow-y: auto;
         }
-        h1 {
-            color: #ffffff;
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 10px;
         }
-        label {
-            font-weight: bold;
-            display: block;
-            margin: 10px 0 5px;
-        }
-        input[type="text"] {
-            width: 100%;
+        .chat-message {
             padding: 10px;
-            margin: 10px 0;
+            margin: 5px;
+            border-radius: 10px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .user {
+            background-color: #007BFF;
+            color: white;
+            align-self: flex-end;
+        }
+        .bot {
+            background-color: #e5e5ea;
+            color: black;
+            align-self: flex-start;
+        }
+        .input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
@@ -51,29 +71,21 @@
             cursor: pointer;
             border-radius: 5px;
             font-size: 16px;
+            margin-left: 10px;
         }
         button:hover {
             background: #0056b3;
         }
-        p {
-            font-size: 1rem;
-            margin: 10px 0;
-        }
-        h2 {
-            color: #333;
+        .luw_icone_cabeçalho{
+            width: 6rem;
         }
         a {
             color: #007BFF;
             text-decoration: none;
-            display: inline-block;
-            margin-top: 20px;
         }
         a:hover {
             text-decoration: underline;
         }
-        .luw_icone_cabeçalho{
-    width: 6rem;
-}
     </style>
 </head>
 <body>
@@ -81,21 +93,63 @@
         <img src="static/Luw_branco_icone.png" alt="LUW" id="luw_icone" class="luw_icone_cabeçalho">
         <h1>LUW Consultant</h1>
     </header>
-    <div class="container">
-        <form method="POST">
-            <label for="query">Digite sua pergunta:</label>
-            <input type="text" id="query" name="query" value="{{ query }}" required>
-            <button type="submit">Enviar</button>
-        </form>
-
-        {% if response %}
-            <h2>Resposta da LUW:</h2>
-            <p>{{ response }}</p>
-        {% elif query %}
-            <p>Nenhum resultado encontrado.</p>
-        {% endif %}
-
-        <a href="/">Voltar para a pesquisa</a>
+    <div class="chat-container">
+        <div class="chat-box" id="chat-box">
+            <div class="chat-message bot">Olá! Como posso te ajudar hoje?</div>
+        </div>
+        <div class="input-container">
+            <input type="text" id="query" placeholder="Digite sua pergunta..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
     </div>
+
+    <a href="/">Voltar para a home</a>
+
+    <script>
+        function sendMessage() {
+            let queryInput = document.getElementById("query");
+            let query = queryInput.value.trim();
+            if (!query) return;
+
+            // Adicionar a pergunta ao chat
+            addMessage(query, "user");
+
+            // Enviar a pergunta para o backend
+            fetch("/ask_chatgpt", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: query })
+            })
+            .then(response => response.json())
+            .then(data => {
+                addMessage(data.response, "bot");
+            })
+            .catch(error => {
+                addMessage("Erro ao obter resposta. Tente novamente.", "bot");
+            });
+
+            queryInput.value = "";
+        }
+
+        function addMessage(text, sender) {
+            let chatBox = document.getElementById("chat-box");
+            let messageDiv = document.createElement("div");
+            messageDiv.classList.add("chat-message", sender);
+            messageDiv.innerText = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+
+         // Chama a rota para limpar o histórico quando o usuário sair da página
+    window.addEventListener("beforeunload", function () {
+        fetch("/clear_history", { method: "POST" });
+    });
+    </script>
 </body>
 </html>

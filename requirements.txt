@@ -1,0 +1,7 @@
+faiss-cpu==1.7.4 # Use a versão compatível com sua aplicação
+flask
+gunicorn
+langchain
+openai
+pandas
+python-dotenv

@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify, redirect, session
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
 from dotenv import load_dotenv
@@ -8,28 +8,53 @@ import os
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
-from flask import Flask, request, render_template, redirect
+
 
 
 # Configuração do modelo LLM
 llm = ChatOpenAI(temperature=0, model="gpt-4-turbo")
 
 template = """
-Compartilharei uma pergunta com você, e você me dará a melhor resposta que devo enviar para o paciente, com base nas melhores respostas anteriores, seguindo TODAS as regras abaixo:
+Função: O assistente deve atuar como um vendedor virtual, fornecendo respostas precisas e eficazes para as dúvidas dos clientes, utilizando as informações disponíveis. Ele deve verificar na tabela de dúvidas as respostas recomendadas, consultar a tabela de produtos para listar produtos e preços, e aplicar as promoções conforme a tabela de descontos.
 
-1/ A resposta deve ser muito semelhante ou até mesmo idêntica às melhores respostas anteriores, em termos de comprimento, tom de voz, argumentos lógicos e outros detalhes.
+Regras:
 
-2/ Se as melhores respostas forem irrelevantes, tente imitar o estilo das melhores respostas para a mensagem do paciente.
+Estilo da Resposta:
 
-3/ Sua resposta deve ser sempre em portugues do Brasil.
+A resposta deve seguir o estilo das melhores respostas anteriores, garantindo coerência em tom de voz, estrutura e argumentos.
+Caso não haja uma resposta exata na tabela de dúvidas, a resposta deve ser elaborada com base no estilo das melhores respostas existentes.
+Uso da Tabela de Produtos:
 
-Abaixo está a pergunta que recebi do paciente:
+O assistente deve verificar se o produto mencionado pelo cliente está na tabela de produtos.
+Se o produto estiver disponível, deve informar seu preço e outras informações relevantes.
+Se o produto não estiver na lista, responder educadamente informando que ele não está disponível no momento.
+Aplicação de Promoções:
+
+O assistente deve conferir se há descontos ou promoções aplicáveis ao produto na tabela de promoções.
+Caso haja uma promoção válida, incluir essa informação na resposta e apresentar o preço atualizado com o desconto.
+Consulta à Tabela de Dúvidas:
+
+Antes de formular a resposta, o assistente deve verificar se há uma resposta padrão para a dúvida do cliente.
+Se houver, a resposta deve ser idêntica ou muito semelhante à melhor resposta registrada.
+Se não houver uma resposta exata, o assistente deve construir uma resposta seguindo o tom e a estrutura das melhores respostas.
+Respostas Sempre em Português do Brasil.
+
+O texto deve ser natural, claro e persuasivo, garantindo um atendimento profissional e agradável.
+
+Abaixo está a pergunta que recebi do cliente:
 {message}
 
-Aqui está uma lista de melhores respostas de como normalmente respondemos a pacientes em cenários semelhantes:
+Aqui está uma lista de melhores respostas de como normalmente respondemos a clientes em cenários semelhantes:
 {best_practice}
 
-Por favor, escreva a melhor resposta que devo enviar para este paciente:
+Os produtos vendidos estão nessa lista:
+{tabela_produtos}
+
+Os descontos e promoções que podem ser aplicados estão nessa lista:
+{tabela_promocoes}
+
+Aqui esta as mensagens anteriores mandadas pelo cliente e as respostas dadas pelo Chatgpt:
+{chat_history}
 """
 
 prompt = PromptTemplate(
@@ -44,9 +69,16 @@ load_dotenv()
 
 # Caminhos
 faiss_index_path = "faiss_index"
-csv_path = "train.csv"
+csv_path = "Duvidas.csv"
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"  # Necessário para usar session
+app.config["SESSION_PERMANENT"] = False  # Sessão expira quando o navegador fecha
+
+@app.route("/clear_history", methods=["POST"])
+def clear_history():
+    session.pop("chat_history", None)  # Remove o histórico da sessão
+    return jsonify({"message": "Histórico apagado"})
 
 # Inicializa o índice FAISS
 if not os.path.exists(faiss_index_path):
@@ -54,7 +86,7 @@ if not os.path.exists(faiss_index_path):
     df = pd.read_csv(csv_path)
 
     # Extraia a coluna desejada
-    problemas = df["Question"].tolist()
+    problemas = df["DUVIDA"].tolist()
 
     # Converta cada string em um objeto Document
     documents = [Document(page_content=issue) for issue in problemas]
@@ -141,37 +173,64 @@ def ask_question():
         for doc, score in results_with_scores:
             # Encontre a resposta correspondente no CSV
             df = pd.read_csv(csv_path)
-            answer = df.loc[df["Question"] == doc.page_content, "Answer"].values[0]
+            answer = df.loc[df["DUVIDA"] == doc.page_content, "RESPOSTAS"].values[0]
             results.append({"question": doc.page_content, "answer": answer, "score": score})
 
     return render_template("ask.html", results=results, query=query)
 
-@app.route("/ask_chatgpt", methods=["GET", "POST"])
+@app.route("/chat")
+def home():
+    return render_template("ask_chatgpt.html")
+
+@app.route("/ask_chatgpt", methods=["POST"])
 def ask_chatgpt():
-    gpt_response = ""
-    query = ""
+    data = request.json
+    query = data.get("query", "")
 
-    if request.method == "POST":
-        query = request.form.get("query")
+    if not query:
+        return jsonify({"response": "Por favor, digite uma pergunta."})
 
-        # Realize a pesquisa de similaridade
-        results_with_scores = db.similarity_search_with_score(query, k=3)
+    # Inicializa o histórico de mensagens na sessão, se não existir
+    if "chat_history" not in session:
+        session["chat_history"] = []
 
-        # Extraia as três perguntas mais relevantes
-        best_practices = [
-            doc.page_content for doc, score in results_with_scores
-        ]
+    # Adiciona a pergunta do usuário ao histórico
+    session["chat_history"].append({"role": "user", "content": query})
 
-        # Combine as melhores práticas em uma string
-        best_practice_text = "\n".join(best_practices)
+    # Realize a pesquisa de similaridade
+    results_with_scores = db.similarity_search_with_score(query, k=3)
+    best_practices = []
+    # Prepare os resultados para exibição
+    for doc, score in results_with_scores:
+        # Encontre a resposta correspondente no CSV
+        df = pd.read_csv(csv_path)
+        answer = df.loc[df["DUVIDA"] == doc.page_content, "RESPOSTAS"].values[0]
+        best_practices.append({"question": doc.page_content, "answer": answer, "score": score})
 
-        # Envie as práticas e a mensagem para o modelo
-        gpt_response = chain.run({
-            "message": query,
-            "best_practice": best_practice_text
-        })
+    # Carregar os CSVs
+    df_produtos = pd.read_csv("Produtos.csv")
+    df_promocoes = pd.read_csv("Promocoes.csv")
 
-    return render_template("ask_chatgpt.html", response=gpt_response, query=query)
+    # Converter para string formatada (ex.: JSON)
+    produtos = df_produtos.to_csv(index=False)
+    promocoes = df_promocoes.to_csv(index=False)
+
+    # Criar o contexto com histórico de mensagens
+    chat_context = session["chat_history"]
+    print(chat_context)
+    # Enviar a conversa completa para o modelo GPT
+    gpt_response = chain.run({
+        "chat_history": chat_context,  # Adicionando o histórico ao prompt
+        "message": query,
+        "best_practice": best_practices,
+        "tabela_produtos": produtos,
+        "tabela_promocoes": promocoes
+    })
+
+    # Adiciona a resposta do chatbot ao histórico
+    session["chat_history"].append({"role": "assistant", "content": gpt_response})
+
+    return jsonify({"response": gpt_response})
 
 @app.route("/table", methods=["GET"])
 def show_table():
@@ -216,4 +275,4 @@ def delete_entry(index):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=8080)
